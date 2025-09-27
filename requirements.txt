@@ -3,4 +3,5 @@ pandas
 numpy
 scikit-learn
 torch
-
+altair
+matplotlib
