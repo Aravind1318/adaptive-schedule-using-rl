@@ -12,11 +12,8 @@ import torch.optim as optim
 # Streamlit UI
 # =====================
 st.set_page_config(page_title="🤖 AI-Driven Adaptive Scheduling (RL)", layout="wide")
-
-# =========================
 st.markdown("""
     <style>
-    /* Main background with black-gold swirl theme */
     .stApp {
         background: linear-gradient(
             135deg,
@@ -33,104 +30,16 @@ st.markdown("""
         font-family: 'Segoe UI', sans-serif;
         color: white;
     }
-
     @keyframes swirlGradient {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-    /* Model Accuracy styled same as prediction cards */
-.model-accuracy-card {
-    background: linear-gradient(145deg, #000000, #1a1a1a, #2c1a1a);
-    border-radius: 12px;
-    padding: 16px;
-    margin: 10px 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #FFD700;
-    border: 1px solid #FFD700;
-}
-
-
-    /* Titles */
     h1, h2, h3, h4 {
-        color: #FFD700; /* Gold */
+        color: #FFD700;
         font-weight: 800;
         text-shadow: 2px 2px 6px black;
     }
-
-    /* Buttons */
-    .stButton > button {
-        background: linear-gradient(90deg, #FFD700, #4d3b1f, #000000) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 0.6em 1.2em !important;
-        font-weight: 600 !important;
-        cursor: pointer !important;
-        transition: all 0.3s ease-in-out !important;
-        box-shadow: 0px 4px 8px rgba(0,0,0,0.6);
-    }
-    .stButton > button:hover {
-        background: linear-gradient(90deg, #ffb700, #b8860b, #2c1a1a) !important;
-        transform: scale(1.05) !important;
-    }
-    .stButton > button:active {
-        transform: scale(0.95) !important;
-    }
-
-    /* Number Input Fields */
-    .stNumberInput > div > div > input {
-        background-color: #1a1a1a !important; 
-        color: #FFD700 !important;
-        border-radius: 8px !important;
-        border: 1px solid #FFD700 !important;
-        padding: 6px 10px !important;
-    }
-
-    /* Selectbox */
-    .stSelectbox > div > div > select {
-        background-color: #2c1a1a !important;
-        color: #FFD700 !important;
-        border-radius: 8px !important;
-        border: 1px solid #FFD700 !important;
-        padding: 6px 10px !important;
-    }
-
-    /* MultiSelect */
-    .stMultiSelect > div > div {
-        background-color: #000000 !important;
-        color: #FFD700 !important;
-        border-radius: 8px !important;
-        border: 1px solid #FFD700 !important;
-        padding: 6px 10px !important;
-    }
-
-    /* DataFrame table */
-    .stDataFrame {
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        border: 2px solid #FFD700 !important;
-    }
-
-    /* Success / Info boxes */
-    .stSuccess {
-        background-color: rgba(218,165,32,0.2) !important;
-        border-left: 6px solid #FFD700 !important;
-        border-radius: 8px !important;
-        padding: 10px !important;
-        color: white !important;
-    }
-    .stInfo {
-        background-color: rgba(255,215,0,0.15) !important;
-        border-left: 6px solid #DAA520 !important;
-        border-radius: 8px !important;
-        padding: 10px !important;
-        color: white !important;
-    }
-
-    /* Custom Prediction Cards */
     .metric-card {
         background: linear-gradient(145deg, #000000, #1a1a1a, #2c1a1a);
         border-radius: 12px;
@@ -144,6 +53,7 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
 st.title("🤖 AI-Driven Adaptive Scheduling (Reinforcement Learning)")
 
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV)", type=["csv"])
@@ -161,37 +71,37 @@ class PolicyNetwork(nn.Module):
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        x = torch.sigmoid(self.fc_out(x))  # outputs between 0 and 1
-        return x
+        return torch.sigmoid(self.fc_out(x))  # outputs between 0 and 1
 
 # =====================
 # Main Logic
 # =====================
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-
     st.write("📊 Dataset Preview:", df.head())
 
-    # ---------------------
-    # Column Selection
-    # ---------------------
     all_columns = df.columns.tolist()
 
-    # Let user choose input & target columns
-    input_cols = st.multiselect("🟢 Select Input (Feature) Columns:", all_columns)
-    target_cols = st.multiselect("🎯 Select Target Columns:", [c for c in all_columns if c not in input_cols])
+    # User selects input & target columns
+    input_cols = st.multiselect("Select input columns (features)", all_columns)
+    target_cols = st.multiselect(
+        "Select target columns (outputs)", 
+        [c for c in all_columns if c not in input_cols]
+    )
 
     if input_cols and target_cols:
-        X = df[input_cols].values
-        y = df[target_cols].values
+        # Ensure numeric only & handle NaN
+        X = df[input_cols].select_dtypes(include=[np.number]).fillna(0).values
+        y = df[target_cols].select_dtypes(include=[np.number]).fillna(0).values
 
-        # Scale features
+        # Scale features & targets
         scaler_X = StandardScaler()
         X_scaled = scaler_X.fit_transform(X)
 
         scaler_y = StandardScaler()
         y_scaled = scaler_y.fit_transform(y)
 
+        # Train-test split
         X_train, X_test, y_train, y_test = train_test_split(
             X_scaled, y_scaled, test_size=0.2, random_state=42
         )
@@ -199,11 +109,10 @@ if uploaded_file is not None:
         input_dim = X_train.shape[1]
         output_dim = y_train.shape[1]
 
-        # RL hyperparams
+        # RL settings
         rl_epochs = st.sidebar.number_input("RL epochs", min_value=100, max_value=5000, value=500, step=100)
         learning_rate = st.sidebar.number_input("Learning rate", min_value=0.0001, max_value=0.01, value=0.001, step=0.0001, format="%.4f")
 
-        # Model, optimizer, loss
         policy = PolicyNetwork(input_dim, output_dim)
         optimizer = optim.Adam(policy.parameters(), lr=learning_rate)
         loss_fn = nn.MSELoss()
@@ -217,8 +126,6 @@ if uploaded_file is not None:
             y_tensor = torch.tensor(y_train, dtype=torch.float32)
 
             preds = policy(X_tensor)
-
-            # Reward = -MSE
             loss = loss_fn(preds, y_tensor)
 
             optimizer.zero_grad()
@@ -232,35 +139,24 @@ if uploaded_file is not None:
         with torch.no_grad():
             y_pred_test = policy(torch.tensor(X_test, dtype=torch.float32)).numpy()
 
-        # Inverse transform
         y_pred_rescaled = scaler_y.inverse_transform(y_pred_test)
         y_test_rescaled = scaler_y.inverse_transform(y_test)
 
-        # R² score
         r2 = r2_score(y_test_rescaled, y_pred_rescaled)
 
         st.subheader("📈 Model Accuracy")
         st.markdown(
-            f"<div style='background-color:black; color:gold; padding:10px; border-radius:10px;'>"
-            f"<b>R² Score:</b> {r2*100:.2f}%"
-            f"</div>",
+            f"<div class='metric-card'><b>R² Score:</b> {r2:.4f}</div>",
             unsafe_allow_html=True
         )
 
-        # =====================
-        # Prediction Demo
-        # =====================
-        st.subheader("🎯 Predictions")
+        st.subheader("🎯 Predictions (Example Row)")
         sample_input = X_test[0].reshape(1, -1)
         with torch.no_grad():
             pred_sample = policy(torch.tensor(sample_input, dtype=torch.float32)).numpy()
         pred_rescaled = scaler_y.inverse_transform(pred_sample)
 
-        # Show prediction
         result_str = "<br>".join(
             [f"<b>{col}:</b> {val:.2f}" for col, val in zip(target_cols, pred_rescaled[0])]
         )
-        st.markdown(
-            f"<div style='background-color:black; color:gold; padding:10px; border-radius:10px;'>{result_str}</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<div class='metric-card'>{result_str}</div>", unsafe_allow_html=True)
