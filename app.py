@@ -11,8 +11,7 @@ from sklearn.preprocessing import StandardScaler
 st.set_page_config(page_title="🤖 AI-Driven Adaptive Scheduling (RL)", layout="wide")
 
 # =========================
-# CSS Styling (same as your version)
-# =========================
+# CSS Styling
 # =========================
 st.markdown("""
     <style>
@@ -39,19 +38,19 @@ st.markdown("""
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-    /* Model Accuracy styled same as prediction cards */
-.model-accuracy-card {
-    background: linear-gradient(145deg, #000000, #1a1a1a, #2c1a1a);
-    border-radius: 12px;
-    padding: 16px;
-    margin: 10px 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #FFD700;
-    border: 1px solid #FFD700;
-}
 
+    /* Model Accuracy styled same as prediction cards */
+    .model-accuracy-card {
+        background: linear-gradient(145deg, #000000, #1a1a1a, #2c1a1a);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 10px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #FFD700;
+        border: 1px solid #FFD700;
+    }
 
     /* Titles */
     h1, h2, h3, h4 {
@@ -144,6 +143,7 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
 st.title("🤖 AI-Driven Adaptive Scheduling (RL Version)")
 
 # ---------------------------
@@ -280,8 +280,12 @@ if "model" in st.session_state:
     input_data = {}
     for col in input_cols:
         if df[col].dtype in ["int64", "float64"]:
-            val = st.number_input(f"{col}", min_value=0.0, max_value=10000.0, value=float(df[col].mean()))
-            input_data[col] = val
+            if col in ["Machine", "Manpower", "Production_Load"]:
+                val = st.number_input(f"{col}", min_value=0, max_value=10000, value=int(df[col].mean()), step=1)
+                input_data[col] = int(val)
+            else:
+                val = st.number_input(f"{col}", min_value=0.0, max_value=10000.0, value=float(round(df[col].mean(), 2)))
+                input_data[col] = float(val)
         else:
             options = df[col].unique().tolist()
             val = st.selectbox(f"{col}", options)
@@ -306,7 +310,10 @@ if "model" in st.session_state:
 
         st.success("🎯 Predictions:")
         for i, col in enumerate(output_cols):
-            val = round(pred[0][i], 2)
+            if col in ["Machine", "Manpower", "Production_Load"]:
+                val = int(round(pred[0][i]))
+            else:
+                val = round(pred[0][i], 2)
             st.markdown(f'<div class="metric-card">{col}: {val}</div>', unsafe_allow_html=True)
 else:
     st.info("📥 Please upload a CSV, select columns, and click 🚀 Train RL Model")
