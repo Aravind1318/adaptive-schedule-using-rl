@@ -12,6 +12,136 @@ import torch.optim as optim
 # Streamlit UI
 # =====================
 st.set_page_config(page_title="🤖 AI-Driven Adaptive Scheduling (RL)", layout="wide")
+st.markdown("""
+    <style>
+    /* Main background with black-gold swirl theme */
+    .stApp {
+        background: linear-gradient(
+            135deg,
+            #000000 0%,
+            #1a1a1a 20%,
+            #4d3b1f 40%,
+            #b8860b 60%,
+            #ffd700 80%,
+            #000000 100%
+        );
+        background-attachment: fixed;
+        background-size: 300% 300%;
+        animation: swirlGradient 25s ease infinite;
+        font-family: 'Segoe UI', sans-serif;
+        color: white;
+    }
+
+    @keyframes swirlGradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    /* Model Accuracy styled same as prediction cards */
+.model-accuracy-card {
+    background: linear-gradient(145deg, #000000, #1a1a1a, #2c1a1a);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 10px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #FFD700;
+    border: 1px solid #FFD700;
+}
+
+
+    /* Titles */
+    h1, h2, h3, h4 {
+        color: #FFD700; /* Gold */
+        font-weight: 800;
+        text-shadow: 2px 2px 6px black;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(90deg, #FFD700, #4d3b1f, #000000) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 0.6em 1.2em !important;
+        font-weight: 600 !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease-in-out !important;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.6);
+    }
+    .stButton > button:hover {
+        background: linear-gradient(90deg, #ffb700, #b8860b, #2c1a1a) !important;
+        transform: scale(1.05) !important;
+    }
+    .stButton > button:active {
+        transform: scale(0.95) !important;
+    }
+
+    /* Number Input Fields */
+    .stNumberInput > div > div > input {
+        background-color: #1a1a1a !important; 
+        color: #FFD700 !important;
+        border-radius: 8px !important;
+        border: 1px solid #FFD700 !important;
+        padding: 6px 10px !important;
+    }
+
+    /* Selectbox */
+    .stSelectbox > div > div > select {
+        background-color: #2c1a1a !important;
+        color: #FFD700 !important;
+        border-radius: 8px !important;
+        border: 1px solid #FFD700 !important;
+        padding: 6px 10px !important;
+    }
+
+    /* MultiSelect */
+    .stMultiSelect > div > div {
+        background-color: #000000 !important;
+        color: #FFD700 !important;
+        border-radius: 8px !important;
+        border: 1px solid #FFD700 !important;
+        padding: 6px 10px !important;
+    }
+
+    /* DataFrame table */
+    .stDataFrame {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        border: 2px solid #FFD700 !important;
+    }
+
+    /* Success / Info boxes */
+    .stSuccess {
+        background-color: rgba(218,165,32,0.2) !important;
+        border-left: 6px solid #FFD700 !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+        color: white !important;
+    }
+    .stInfo {
+        background-color: rgba(255,215,0,0.15) !important;
+        border-left: 6px solid #DAA520 !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+        color: white !important;
+    }
+
+    /* Custom Prediction Cards */
+    .metric-card {
+        background: linear-gradient(145deg, #000000, #1a1a1a, #2c1a1a);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 10px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #FFD700;
+        border: 1px solid #FFD700;
+    }
+    </style>
+""", unsafe_allow_html=True)
 st.title("🤖 AI-Driven Adaptive Scheduling (Reinforcement Learning)")
 
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV)", type=["csv"])
