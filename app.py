@@ -12,6 +12,8 @@ import torch.optim as optim
 # Streamlit UI
 # =====================
 st.set_page_config(page_title="🤖 AI-Driven Adaptive Scheduling (RL)", layout="wide")
+
+# =========================
 st.markdown("""
     <style>
     /* Main background with black-gold swirl theme */
@@ -159,8 +161,7 @@ class PolicyNetwork(nn.Module):
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        # 🔒 constrain output between 0 and 1
-        x = torch.sigmoid(self.fc_out(x))
+        x = torch.sigmoid(self.fc_out(x))  # outputs between 0 and 1
         return x
 
 # =====================
@@ -171,82 +172,95 @@ if uploaded_file is not None:
 
     st.write("📊 Dataset Preview:", df.head())
 
-    # Assume last two columns are target (Machine, Manpower)
-    X = df.iloc[:, :-2].values
-    y = df.iloc[:, -2:].values
+    # ---------------------
+    # Column Selection
+    # ---------------------
+    all_columns = df.columns.tolist()
 
-    # Scale features
-    scaler_X = StandardScaler()
-    X_scaled = scaler_X.fit_transform(X)
+    # Let user choose input & target columns
+    input_cols = st.multiselect("🟢 Select Input (Feature) Columns:", all_columns)
+    target_cols = st.multiselect("🎯 Select Target Columns:", [c for c in all_columns if c not in input_cols])
 
-    scaler_y = StandardScaler()
-    y_scaled = scaler_y.fit_transform(y)
+    if input_cols and target_cols:
+        X = df[input_cols].values
+        y = df[target_cols].values
 
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_scaled, test_size=0.2, random_state=42)
+        # Scale features
+        scaler_X = StandardScaler()
+        X_scaled = scaler_X.fit_transform(X)
 
-    input_dim = X_train.shape[1]
-    output_dim = y_train.shape[1]
+        scaler_y = StandardScaler()
+        y_scaled = scaler_y.fit_transform(y)
 
-    # RL settings
-    rl_epochs = st.sidebar.number_input("RL epochs", min_value=100, max_value=5000, value=500, step=100)
-    learning_rate = st.sidebar.number_input("Learning rate", min_value=0.0001, max_value=0.01, value=0.001, step=0.0001, format="%.4f")
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_scaled, y_scaled, test_size=0.2, random_state=42
+        )
 
-    policy = PolicyNetwork(input_dim, output_dim)
-    optimizer = optim.Adam(policy.parameters(), lr=learning_rate)
-    loss_fn = nn.MSELoss()
+        input_dim = X_train.shape[1]
+        output_dim = y_train.shape[1]
 
-    # =====================
-    # Training Loop
-    # =====================
-    for epoch in range(rl_epochs):
-        policy.train()
-        X_tensor = torch.tensor(X_train, dtype=torch.float32)
-        y_tensor = torch.tensor(y_train, dtype=torch.float32)
+        # RL hyperparams
+        rl_epochs = st.sidebar.number_input("RL epochs", min_value=100, max_value=5000, value=500, step=100)
+        learning_rate = st.sidebar.number_input("Learning rate", min_value=0.0001, max_value=0.01, value=0.001, step=0.0001, format="%.4f")
 
-        preds = policy(X_tensor)
+        # Model, optimizer, loss
+        policy = PolicyNetwork(input_dim, output_dim)
+        optimizer = optim.Adam(policy.parameters(), lr=learning_rate)
+        loss_fn = nn.MSELoss()
 
-        # Reward = -MSE
-        loss = loss_fn(preds, y_tensor)
+        # =====================
+        # Training Loop
+        # =====================
+        for epoch in range(rl_epochs):
+            policy.train()
+            X_tensor = torch.tensor(X_train, dtype=torch.float32)
+            y_tensor = torch.tensor(y_train, dtype=torch.float32)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            preds = policy(X_tensor)
 
-    # =====================
-    # Evaluation
-    # =====================
-    policy.eval()
-    with torch.no_grad():
-        y_pred_test = policy(torch.tensor(X_test, dtype=torch.float32)).numpy()
+            # Reward = -MSE
+            loss = loss_fn(preds, y_tensor)
 
-    # Inverse transform to original scale
-    y_pred_rescaled = scaler_y.inverse_transform(y_pred_test)
-    y_test_rescaled = scaler_y.inverse_transform(y_test)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-    # Calculate R²
-    r2 = r2_score(y_test_rescaled, y_pred_rescaled)
+        # =====================
+        # Evaluation
+        # =====================
+        policy.eval()
+        with torch.no_grad():
+            y_pred_test = policy(torch.tensor(X_test, dtype=torch.float32)).numpy()
 
-    # =====================
-    # Streamlit Display
-    # =====================
-    st.subheader("📈 Model Accuracy")
-    st.markdown(
-        f"<div style='background-color:black; color:gold; padding:10px; border-radius:10px;'>"
-        f"<b>R² Score:</b> {r2*100:.2f}%"
-        f"</div>",
-        unsafe_allow_html=True
-    )
+        # Inverse transform
+        y_pred_rescaled = scaler_y.inverse_transform(y_pred_test)
+        y_test_rescaled = scaler_y.inverse_transform(y_test)
 
-    st.subheader("🎯 Predictions")
-    sample_input = X_test[0].reshape(1, -1)
-    with torch.no_grad():
-        pred_sample = policy(torch.tensor(sample_input, dtype=torch.float32)).numpy()
-    pred_rescaled = scaler_y.inverse_transform(pred_sample)
+        # R² score
+        r2 = r2_score(y_test_rescaled, y_pred_rescaled)
 
-    st.markdown(
-        f"<div style='background-color:black; color:gold; padding:10px; border-radius:10px;'>"
-        f"<b>Machine:</b> {pred_rescaled[0][0]:.2f} <br>"
-        f"<b>Manpower:</b> {pred_rescaled[0][1]:.2f}"
-        f"</div>",
-        unsafe_allow_html=True
-    )
+        st.subheader("📈 Model Accuracy")
+        st.markdown(
+            f"<div style='background-color:black; color:gold; padding:10px; border-radius:10px;'>"
+            f"<b>R² Score:</b> {r2*100:.2f}%"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+        # =====================
+        # Prediction Demo
+        # =====================
+        st.subheader("🎯 Predictions")
+        sample_input = X_test[0].reshape(1, -1)
+        with torch.no_grad():
+            pred_sample = policy(torch.tensor(sample_input, dtype=torch.float32)).numpy()
+        pred_rescaled = scaler_y.inverse_transform(pred_sample)
+
+        # Show prediction
+        result_str = "<br>".join(
+            [f"<b>{col}:</b> {val:.2f}" for col, val in zip(target_cols, pred_rescaled[0])]
+        )
+        st.markdown(
+            f"<div style='background-color:black; color:gold; padding:10px; border-radius:10px;'>{result_str}</div>",
+            unsafe_allow_html=True
+        )
